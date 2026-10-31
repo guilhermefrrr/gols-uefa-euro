@@ -110,13 +110,13 @@
                 "Column": {
                   "Expression": {
                     "SourceRef": {
-                      "Entity": "euro jogos"
+                      "Entity": "euro edições"
                     }
                   },
-                  "Property": "idedicao"
+                  "Property": "ano"
                 }
               },
-              "queryRef": "Sum(euro jogos.idedicao)",
+              "queryRef": "Sum(euro edições.ano)",
               "nativeQueryRef": "Edição",
               "displayName": "Edição"
             },
