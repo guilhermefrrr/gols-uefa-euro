@@ -137,6 +137,7 @@ Os dados foram coletados para fins de estudo e portfólio.
 - `dump_euro.sql`: arquivo de exportação do banco de dados.
 - `script_euro.sql`: consultas SQL, verificações de consistência e criação da view `resultados_atualizados`.
 - `.pbip-files/`: arquivos do projeto do Power BI.
+- `images/`: capturas de tela do relatório usadas neste README.
 
 ## Aviso
 
