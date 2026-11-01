@@ -1,3 +1,13 @@
+﻿-- Uefa Euro (1960-2024): schema, data and view (T-SQL)
+-- Before running: create an empty database (e.g. CREATE DATABASE euro;) and
+-- select it in SSMS. The script creates the [euro] schema, the tables, the data
+-- and the view [dbo].[resultados_atualizados].
+IF DB_NAME() IN (N'master', N'model', N'msdb', N'tempdb')
+BEGIN
+    PRINT N'Select an empty user database (not a system database) before running this script.';
+    SET NOEXEC ON;
+END
+GO
 IF  EXISTS (SELECT * FROM sys.fn_listextendedproperty(N'MS_SSMA_SOURCE' , N'SCHEMA',N'euro', N'TABLE',N'resultados', NULL,NULL))
 EXEC sys.sp_dropextendedproperty @name=N'MS_SSMA_SOURCE' , @level0type=N'SCHEMA',@level0name=N'euro', @level1type=N'TABLE',@level1name=N'resultados'
 GO
@@ -71,89 +81,6 @@ GO
 /****** Objeto:  Schema [euro]    Data do Script: 31/10/2026 12:46:35 ******/
 DROP SCHEMA IF EXISTS [euro]
 GO
-/****** Objeto:  Database [euro]    Data do Script: 31/10/2026 12:46:35 ******/
-DROP DATABASE IF EXISTS [euro]
-GO
-/****** Objeto:  Database [euro]    Data do Script: 31/10/2026 12:46:35 ******/
-CREATE DATABASE [euro]
- CONTAINMENT = NONE
- ON  PRIMARY 
-( NAME = N'euro', FILENAME = N'C:\Program Files\Microsoft SQL Server\MSSQL16.SQLEXPRESS\MSSQL\DATA\euro.mdf' , SIZE = 8192KB , MAXSIZE = UNLIMITED, FILEGROWTH = 65536KB )
- LOG ON 
-( NAME = N'euro_log', FILENAME = N'C:\Program Files\Microsoft SQL Server\MSSQL16.SQLEXPRESS\MSSQL\DATA\euro_log.ldf' , SIZE = 8192KB , MAXSIZE = 2048GB , FILEGROWTH = 65536KB )
- WITH CATALOG_COLLATION = DATABASE_DEFAULT, LEDGER = OFF
-GO
-ALTER DATABASE [euro] SET COMPATIBILITY_LEVEL = 160
-GO
-IF (1 = FULLTEXTSERVICEPROPERTY('IsFullTextInstalled'))
-begin
-EXEC [euro].[dbo].[sp_fulltext_database] @action = 'enable'
-end
-GO
-ALTER DATABASE [euro] SET ANSI_NULL_DEFAULT OFF 
-GO
-ALTER DATABASE [euro] SET ANSI_NULLS OFF 
-GO
-ALTER DATABASE [euro] SET ANSI_PADDING OFF 
-GO
-ALTER DATABASE [euro] SET ANSI_WARNINGS OFF 
-GO
-ALTER DATABASE [euro] SET ARITHABORT OFF 
-GO
-ALTER DATABASE [euro] SET AUTO_CLOSE ON 
-GO
-ALTER DATABASE [euro] SET AUTO_SHRINK OFF 
-GO
-ALTER DATABASE [euro] SET AUTO_UPDATE_STATISTICS ON 
-GO
-ALTER DATABASE [euro] SET CURSOR_CLOSE_ON_COMMIT OFF 
-GO
-ALTER DATABASE [euro] SET CURSOR_DEFAULT  GLOBAL 
-GO
-ALTER DATABASE [euro] SET CONCAT_NULL_YIELDS_NULL OFF 
-GO
-ALTER DATABASE [euro] SET NUMERIC_ROUNDABORT OFF 
-GO
-ALTER DATABASE [euro] SET QUOTED_IDENTIFIER OFF 
-GO
-ALTER DATABASE [euro] SET RECURSIVE_TRIGGERS OFF 
-GO
-ALTER DATABASE [euro] SET  ENABLE_BROKER 
-GO
-ALTER DATABASE [euro] SET AUTO_UPDATE_STATISTICS_ASYNC OFF 
-GO
-ALTER DATABASE [euro] SET DATE_CORRELATION_OPTIMIZATION OFF 
-GO
-ALTER DATABASE [euro] SET TRUSTWORTHY OFF 
-GO
-ALTER DATABASE [euro] SET ALLOW_SNAPSHOT_ISOLATION OFF 
-GO
-ALTER DATABASE [euro] SET PARAMETERIZATION SIMPLE 
-GO
-ALTER DATABASE [euro] SET READ_COMMITTED_SNAPSHOT OFF 
-GO
-ALTER DATABASE [euro] SET HONOR_BROKER_PRIORITY OFF 
-GO
-ALTER DATABASE [euro] SET RECOVERY SIMPLE 
-GO
-ALTER DATABASE [euro] SET  MULTI_USER 
-GO
-ALTER DATABASE [euro] SET PAGE_VERIFY CHECKSUM  
-GO
-ALTER DATABASE [euro] SET DB_CHAINING OFF 
-GO
-ALTER DATABASE [euro] SET FILESTREAM( NON_TRANSACTED_ACCESS = OFF ) 
-GO
-ALTER DATABASE [euro] SET TARGET_RECOVERY_TIME = 60 SECONDS 
-GO
-ALTER DATABASE [euro] SET DELAYED_DURABILITY = DISABLED 
-GO
-ALTER DATABASE [euro] SET ACCELERATED_DATABASE_RECOVERY = OFF  
-GO
-ALTER DATABASE [euro] SET QUERY_STORE = ON
-GO
-ALTER DATABASE [euro] SET QUERY_STORE (OPERATION_MODE = READ_WRITE, CLEANUP_POLICY = (STALE_QUERY_THRESHOLD_DAYS = 30), DATA_FLUSH_INTERVAL_SECONDS = 900, INTERVAL_LENGTH_MINUTES = 60, MAX_STORAGE_SIZE_MB = 1000, QUERY_CAPTURE_MODE = AUTO, SIZE_BASED_CLEANUP_MODE = AUTO, MAX_PLANS_PER_QUERY = 200, WAIT_STATS_CAPTURE_MODE = ON)
-GO
 /****** Objeto:  Schema [euro]    Data do Script: 31/10/2026 12:46:35 ******/
 CREATE SCHEMA [euro]
 GO
@@ -203,37 +130,33 @@ SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE   VIEW [dbo].[resultados_atualizados] AS
-WITH resultados_invertidos AS (
-    SELECT
-        idjogo,
-        idedicao,
-        fase,
-        data,
-        horário,
-        país,
-        cidade,
-        estádio,
-        seleção2        AS seleção,
-        gols_seleção2   AS gols_marcados,
-        seleção1        AS adversário,
-        gols_seleção1   AS gols_sofridos,
-        desempate,
-        venc_desempate
+CREATE VIEW [dbo].[resultados_atualizados] AS
+WITH resultados_duplicados AS (
+    -- one row for the first team
+    SELECT idjogo, idedicao, fase, [data], horário, país, cidade, estádio,
+           seleção1       AS seleção,
+           gols_seleção1  AS gols_marcados,
+           seleção2       AS adversário,
+           gols_seleção2  AS gols_sofridos,
+           desempate, venc_desempate
     FROM euro.jogos
-),
 
-resultados_duplicados AS (
-    SELECT * FROM resultados_invertidos
     UNION ALL
-    SELECT * FROM euro.jogos
-)
 
-SELECT 
+    -- one row for the second team (perspective inverted)
+    SELECT idjogo, idedicao, fase, [data], horário, país, cidade, estádio,
+           seleção2       AS seleção,
+           gols_seleção2  AS gols_marcados,
+           seleção1       AS adversário,
+           gols_seleção1  AS gols_sofridos,
+           desempate, venc_desempate
+    FROM euro.jogos
+)
+SELECT
     rd.idjogo,
     rd.idedicao,
     rd.fase,
-    rd.data,
+    rd.[data],
     rd.horário,
     rd.país,
     rd.cidade,
@@ -245,12 +168,9 @@ SELECT
     rd.desempate,
     p3.nome_pais_atual AS venc_desempate
 FROM resultados_duplicados rd
-LEFT JOIN euro.participantes p1 
-    ON rd.seleção = p1.nome_pais
-LEFT JOIN euro.participantes p2 
-    ON rd.adversário = p2.nome_pais
-LEFT JOIN euro.participantes p3 
-    ON rd.venc_desempate = p3.nome_pais;
+LEFT JOIN euro.participantes p1 ON rd.seleção = p1.nome_pais
+LEFT JOIN euro.participantes p2 ON rd.adversário = p2.nome_pais
+LEFT JOIN euro.participantes p3 ON rd.venc_desempate = p3.nome_pais;
 GO
 /****** Objeto:  Table [euro].[campeãs]    Data do Script: 31/10/2026 12:46:36 ******/
 SET ANSI_NULLS ON
@@ -1265,7 +1185,7 @@ INSERT [euro].[gols] ([idgol], [idjogo], [idedicao], [seleção], [nome_jogador]
 INSERT [euro].[gols] ([idgol], [idjogo], [idedicao], [seleção], [nome_jogador], [contra], [etapa], [minuto], [placar_time], [placar_adversario]) VALUES (884, 359, 17, N'Geórgia', N'Georges Mikautadze', NULL, N'1º tempo', 49, 1, 0)
 INSERT [euro].[gols] ([idgol], [idjogo], [idedicao], [seleção], [nome_jogador], [contra], [etapa], [minuto], [placar_time], [placar_adversario]) VALUES (885, 359, 17, N'Tchéquia', N'Patrik Schick', NULL, N'2º tempo', 59, 1, 1)
 INSERT [euro].[gols] ([idgol], [idjogo], [idedicao], [seleção], [nome_jogador], [contra], [etapa], [minuto], [placar_time], [placar_adversario]) VALUES (886, 360, 17, N'Portugal', N'Bernardo Silva', NULL, N'1º tempo', 21, 1, 0)
-INSERT [euro].[gols] ([idgol], [idjogo], [idedicao], [seleção], [nome_jogador], [contra], [etapa], [minuto], [placar_time], [placar_adversario]) VALUES (887, 360, 17, N'Portugal', N'Samet Akaydin', N'contra', N'2º tempo', 28, 2, 0)
+INSERT [euro].[gols] ([idgol], [idjogo], [idedicao], [seleção], [nome_jogador], [contra], [etapa], [minuto], [placar_time], [placar_adversario]) VALUES (887, 360, 17, N'Portugal', N'Samet Akaydin', N'contra', N'1º tempo', 28, 2, 0)
 INSERT [euro].[gols] ([idgol], [idjogo], [idedicao], [seleção], [nome_jogador], [contra], [etapa], [minuto], [placar_time], [placar_adversario]) VALUES (888, 360, 17, N'Portugal', N'Bruno Fernandes', NULL, N'2º tempo', 56, 3, 0)
 INSERT [euro].[gols] ([idgol], [idjogo], [idedicao], [seleção], [nome_jogador], [contra], [etapa], [minuto], [placar_time], [placar_adversario]) VALUES (889, 361, 17, N'Bélgica', N'Youri Tielemans', NULL, N'1º tempo', 2, 1, 0)
 INSERT [euro].[gols] ([idgol], [idjogo], [idedicao], [seleção], [nome_jogador], [contra], [etapa], [minuto], [placar_time], [placar_adversario]) VALUES (890, 361, 17, N'Bélgica', N'Kevin de Bruyne', NULL, N'2º tempo', 80, 2, 0)
@@ -1298,7 +1218,7 @@ INSERT [euro].[gols] ([idgol], [idjogo], [idedicao], [seleção], [nome_jogador]
 INSERT [euro].[gols] ([idgol], [idjogo], [idedicao], [seleção], [nome_jogador], [contra], [etapa], [minuto], [placar_time], [placar_adversario]) VALUES (916, 376, 17, N'Inglaterra', N'Jude Bellingham', NULL, N'2º tempo', 95, 1, 1)
 INSERT [euro].[gols] ([idgol], [idjogo], [idedicao], [seleção], [nome_jogador], [contra], [etapa], [minuto], [placar_time], [placar_adversario]) VALUES (917, 376, 17, N'Inglaterra', N'Harry Kane', NULL, N'1º tempo da prorrogação', 91, 2, 1)
 INSERT [euro].[gols] ([idgol], [idjogo], [idedicao], [seleção], [nome_jogador], [contra], [etapa], [minuto], [placar_time], [placar_adversario]) VALUES (918, 377, 17, N'Geórgia', N'Robin Le Normand', N'contra', N'1º tempo', 25, 1, 0)
-INSERT [euro].[gols] ([idgol], [idjogo], [idedicao], [seleção], [nome_jogador], [contra], [etapa], [minuto], [placar_time], [placar_adversario]) VALUES (919, 377, 17, N'Espanha', N'Rodri', NULL, N'2º tempo', 39, 1, 1)
+INSERT [euro].[gols] ([idgol], [idjogo], [idedicao], [seleção], [nome_jogador], [contra], [etapa], [minuto], [placar_time], [placar_adversario]) VALUES (919, 377, 17, N'Espanha', N'Rodri', NULL, N'1º tempo', 39, 1, 1)
 INSERT [euro].[gols] ([idgol], [idjogo], [idedicao], [seleção], [nome_jogador], [contra], [etapa], [minuto], [placar_time], [placar_adversario]) VALUES (920, 377, 17, N'Espanha', N'Fabián Ruiz', NULL, N'2º tempo', 51, 2, 1)
 INSERT [euro].[gols] ([idgol], [idjogo], [idedicao], [seleção], [nome_jogador], [contra], [etapa], [minuto], [placar_time], [placar_adversario]) VALUES (921, 377, 17, N'Espanha', N'Nico Williams', NULL, N'2º tempo', 75, 3, 1)
 INSERT [euro].[gols] ([idgol], [idjogo], [idedicao], [seleção], [nome_jogador], [contra], [etapa], [minuto], [placar_time], [placar_adversario]) VALUES (922, 377, 17, N'Espanha', N'Dani Olmo', NULL, N'2º tempo', 83, 4, 1)
@@ -3152,5 +3072,6 @@ EXEC sys.sp_addextendedproperty @name=N'MS_SSMA_SOURCE', @value=N'euro.participa
 GO
 EXEC sys.sp_addextendedproperty @name=N'MS_SSMA_SOURCE', @value=N'euro.resultados' , @level0type=N'SCHEMA',@level0name=N'euro', @level1type=N'TABLE',@level1name=N'resultados'
 GO
-ALTER DATABASE [euro] SET  READ_WRITE 
+
+SET NOEXEC OFF
 GO

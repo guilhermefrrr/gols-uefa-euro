@@ -1,5 +1,5 @@
 ﻿-------------------------------------------------------
--- UEFA EURO (1960-2024): exploratory queries, data checks and views
+-- Uefa Euro (1960-2024): exploratory queries, data checks and views
 -- Target: SQL Server (T-SQL). Run it against a database restored
 -- from dump_euro.sql. Expected totals: 388 matches, 946 goals,
 -- 566 players.
@@ -48,6 +48,7 @@ LEFT JOIN euro.jogadores j ON g.nome_jogador = j.nome
 WHERE j.nome IS NULL;
 
 -- Goals recorded in the wrong period of the match
+SELECT * FROM euro.gols WHERE etapa = N'1º tempo' AND minuto > 45;
 SELECT * FROM euro.gols WHERE etapa = N'2º tempo' AND minuto < 46;
 SELECT * FROM euro.gols WHERE etapa = N'2º tempo da prorrogação' AND minuto < 106;
 
