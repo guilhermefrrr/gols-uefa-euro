@@ -48,11 +48,11 @@ O banco reúne tabelas relacionadas a:
 ```mermaid
 erDiagram
     campeas ||--o{ edicoes : "selecao = campea"
-    edicoes ||--o{ jogos : "ano = idedicao"
+    edicoes ||--o{ jogos : "idedicao"
     jogos ||--o{ gols : "idjogo"
     jogos ||--o{ resultados : "idjogo"
     jogadores ||--o{ gols : "nome"
-    participantes ||--o{ resultados : "selecao"
+    participantes ||--o{ jogos : "nome_pais"
 
     campeas {
         int idcampeas PK
@@ -66,7 +66,7 @@ erDiagram
     }
     jogos {
         int idjogo PK
-        int idedicao
+        int idedicao FK
         string fase
         date data
         time horario
@@ -100,7 +100,8 @@ erDiagram
     }
     participantes {
         int idparticipante PK
-        string selecao
+        string nome_pais
+        string nome_pais_atual
     }
     resultados {
         int idresultado PK
@@ -124,6 +125,10 @@ O script SQL inclui consultas exploratórias e verificações de consistência, 
 A view consolida os resultados das partidas em duas linhas por jogo — uma para cada seleção. Ela apresenta os gols marcados e sofridos por cada equipe, o adversário e informações contextuais da partida. Também utiliza a tabela de participantes para relacionar nomes históricos de seleções aos nomes atuais.
 
 Essa estrutura facilita análises por seleção sem precisar separar a equipe mandante ou a primeira seleção da segunda seleção em colunas diferentes.
+
+## Como reproduzir o banco
+
+O arquivo `dump_euro.sql` contém a estrutura e os dados do banco em T-SQL. Para reproduzi-lo, crie um banco vazio no SQL Server (por exemplo, `CREATE DATABASE euro;`), selecione-o e execute o script. Depois, rode `script_euro.sql` para as consultas, as verificações de consistência e a view.
 
 ## Fontes de dados
 
